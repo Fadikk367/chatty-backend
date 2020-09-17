@@ -1,0 +1,1 @@
+export * as roomsController from './rooms.controller';
