@@ -1,6 +1,12 @@
-export interface Message {
-  id: number;
-  author: string;
-  authorId: string;
-  content: string;
+import { v4 as uuidv4 } from 'uuid';
+
+export class Message {
+  id = uuidv4();
+  timestamp = Date.now();
+
+  constructor(
+    public content: string,
+    public author: string,
+    public authorId: string,
+  ) {}
 }

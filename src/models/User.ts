@@ -1,16 +1,11 @@
-import { v4 as uuidv4 } from 'uuid';
-
-export enum UserType {
-  GUEST = 'GUEST',
-  REGISTERED_USER = 'REGUSTERED_UESR',
-}
+import { ChatUserType } from './Types';
 
 export class User {
-  id = uuidv4();
+  roomIds: string[] = [];
 
   constructor(
     public nick: string,
-    public socketId: string,
-    public type: UserType = UserType.GUEST,
+    public id: string,
+    public type: ChatUserType = ChatUserType.GUEST,
   ) {}
 }

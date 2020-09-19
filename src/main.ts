@@ -9,7 +9,8 @@ import socket, { Socket } from 'socket.io';
 import { HttpError } from 'http-errors';
 
 import { roomsRouter } from './routes';
-import { Room, User, Message, Collection } from './models';
+import { Room, User, Message, Collection, ChatUserType } from './models';
+import { roomsController } from 'controllers';
 
 export const usersCollection = new Collection<User>();
 export const roomsCollection = new Collection<Room>();
@@ -39,29 +40,54 @@ const io = socket.listen(server).sockets;
 
 io.on('connection', (socket: Socket) => {
   console.log('user connected: ', socket.id);
-  socket.join('test room');
-  console.log(socket.adapter.rooms);
 
-  socket.on('new-user', (data: User) => {
-    const user = new User(data.nick, socket.id, data.type);
+  const connectedUsers = usersCollection.getItems();
+  const availableRooms = roomsCollection.getItems();
+  socket.emit('chat-state', { connectedUsers, availableRooms });
 
-    usersCollection.addOne(user);
-    socket.emit('user-connected', user);
-  })
+  socket.on('new-user', (data: { nickname: string, type: ChatUserType }) => {
+    const newUser = new User(data.nickname, socket.id, data.type);
+    usersCollection.addOne(newUser);
 
-  socket.on('join-room', (user: User) => {
-    const chatUser = usersCollection.get(user.socketId);
-    socket.broadcast.emit('user-joined', chatUser);
-  })
-
-  socket.on('message', (message: Message) => {
-    console.log({message});
-    socket.broadcast.emit('message', message);
+    io.emit('new-user', newUser);
   });
 
+  socket.on('new-room', (data: { name: string, isProtected?: boolean, password?: string, slots?: number}) => {
+    const roomAdmin = usersCollection.get(socket.id);
+    const { isProtected, password, slots } = data;
+    const roomOptions = {
+      isProtected,
+      password,
+      slots,
+    }
+    const newRoom = new Room(data.name, roomAdmin, [roomAdmin], roomOptions);
+    roomAdmin.roomIds.push(newRoom.id);
+    roomsCollection.addOne(newRoom);
+
+    socket.join(newRoom.id);
+
+    io.emit('new-room', newRoom);
+  })
+
+
   socket.on('disconnect', () => {
-    console.log('disconnected');
-    console.log(socket.adapter.rooms);
+    console.log('user disconnected: ', socket.id);
+    try {
+      const disconnectedUser = usersCollection.remove(socket.id);
+      console.log(disconnectedUser);
+      disconnectedUser.roomIds.forEach(roomId => {
+        try {
+          roomsCollection.get(roomId).removeMember(disconnectedUser.id);
+        } catch(err) {
+          if (err.name = 'EMPTY_ROOM')
+            roomsCollection.remove(roomId);
+            io.emit('room-deleted', roomId)
+        }
+      })
+      io.emit('user-disconnected', socket.id);
+    } catch(err) {
+      return;
+    }
   })
 });
 

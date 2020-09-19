@@ -8,13 +8,17 @@ export class Collection<T extends { id: string }> {
       this.addMany(items);
   }
 
-  getItems() {
+  getItems(): T[] {
     const mapIterator = this.items.values();
     return [...mapIterator];
   }
 
-  get(key: string) {
-    return this.items.get(key);
+  get(key: string): T {
+    const item = this.items.get(key);
+    if (!item)
+      throw new Error('No such element');
+    
+    return item;
   }
 
   addOne(item: T): Collection<T> {
@@ -27,7 +31,9 @@ export class Collection<T extends { id: string }> {
     return this;
   }
 
-  remove(itemId: string) {
-    this.items.delete(itemId);
+  remove(itemId: string): T {
+    const deletedItem = this.get(itemId);
+    this.items.delete(itemId);;
+    return deletedItem;
   }
 }
