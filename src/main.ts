@@ -43,7 +43,7 @@ io.on('connection', (socket: Socket) => {
 
   const connectedUsers = usersCollection.getItems();
   const availableRooms = roomsCollection.getItems();
-  socket.emit('chat-state', { connectedUsers, availableRooms });
+  socket.emit('chat-state', { connectedUsers, availableRooms, id: socket.id });
 
   socket.on('new-user', (data: { nickname: string, type: ChatUserType }) => {
     const newUser = new User(data.nickname, socket.id, data.type);
@@ -51,6 +51,14 @@ io.on('connection', (socket: Socket) => {
 
     io.emit('new-user', newUser);
   });
+
+  socket.on('message', ({ message, roomId}: { message: Message, roomId: string}) => {
+    console.log({message, roomId, rooms: io.adapter.rooms});
+    const room = roomsCollection.get(roomId);
+    room.messages.push(message);
+    io.in(roomId).emit('message', { message, roomId });
+
+  })
 
   socket.on('new-room', (data: { name: string, isProtected?: boolean, password?: string, slots?: number}) => {
     const roomAdmin = usersCollection.get(socket.id);
@@ -67,7 +75,39 @@ io.on('connection', (socket: Socket) => {
     socket.join(newRoom.id);
 
     io.emit('new-room', newRoom);
-  })
+  });
+
+
+  socket.on('join-room', (roomId: string) => {
+    try {
+      const room = roomsCollection.get(roomId);
+      const user = usersCollection.get(socket.id);
+      if (room.admin.id === user.id || room.members.includes(user))
+        return;
+
+      room.members.push(user);
+      socket.join(roomId);
+      socket.emit('welcome-to-room', room)
+      // socket.to(roomId).broadcast.emit('user-joined-room', { user, roomId });
+      socket.broadcast.emit('user-joined-room', { user, roomId });
+    } catch (err) {
+      return;
+    }
+  });
+
+  
+  socket.on('leave-room', (roomId: string) => {
+    try {
+      const room = roomsCollection.get(roomId);
+      const user = usersCollection.get(socket.id);
+      room.removeMember(user.id);
+      socket.leave(roomId);
+      // socket.to(roomId).broadcast.emit('user-left-room', { user, roomId });
+      io.emit('user-left-room', { user, roomId });
+    } catch (err) {
+      return;
+    }
+  });
 
 
   socket.on('disconnect', () => {
@@ -79,9 +119,10 @@ io.on('connection', (socket: Socket) => {
         try {
           roomsCollection.get(roomId).removeMember(disconnectedUser.id);
         } catch(err) {
-          if (err.name = 'EMPTY_ROOM')
+          if (err.name = 'EMPTY_ROOM') {
             roomsCollection.remove(roomId);
-            io.emit('room-deleted', roomId)
+            io.emit('room-deleted', roomId);
+          }
         }
       })
       io.emit('user-disconnected', socket.id);

@@ -1,11 +1,13 @@
 import { User } from './User';
 import { v4 as uuidv4 } from 'uuid';
+import { Message } from './Message';
 
 export class Room {
   id = uuidv4();
   isProtected: boolean = false;
   password: string | undefined = undefined;
   slots: number | undefined = undefined;
+  messages: Message[] = [];
 
   constructor(
     public name: string,
