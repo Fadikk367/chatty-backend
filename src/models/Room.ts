@@ -28,10 +28,10 @@ export class Room {
   removeMember(memberId: string): void {
     this.members = this.members.filter(member => member.id !== memberId);
 
-    if(this.members.length === 0) {
-      const error = new Error('Empty room!');
-      error.name = 'EMPTY_ROOM';
-      throw error;
-    }
+    // if(this.members.length === 0) {
+    //   const error = new Error('Empty room!');
+    //   error.name = 'EMPTY_ROOM';
+    //   throw error;
+    // }
   }
 }

@@ -6,15 +6,31 @@ import mongoose from 'mongoose';
 import helmet from 'helmet';
 import http from 'http';
 import socket, { Socket } from 'socket.io';
-import { HttpError } from 'http-errors';
+import { createConnection } from 'typeorm';
+import "reflect-metadata";
 
-import { roomsRouter } from './routes';
+import { roomsRouter, authRouter } from './routes';
 import { Room, User, Message, Collection, ChatUserType } from './models';
-import { roomsController } from 'controllers';
 
 export const usersCollection = new Collection<User>();
 export const roomsCollection = new Collection<Room>();
 
+const admin = new User('nick', '12134', ChatUserType.REGISTERED);
+const room1 = new Room('Gaming', admin, [], {  isProtected: false, slots: 100});
+const room2 = new Room('Traveling', admin, [], {  isProtected: false, slots: 100});
+const room3 = new Room('Rummors', admin, [], {  isProtected: false, slots: 100});
+const room4 = new Room('Beauty', admin, [], {  isProtected: false, slots: 100});
+const room5 = new Room('Learning', admin, [], {  isProtected: false, slots: 100});
+roomsCollection.addMany([room1, room2, room3, room4, room5]);
+
+createConnection()
+  .then(() => {
+    console.log('Connected to the databse!');
+  })
+  .catch(err => {
+    console.log('Failed to connect to the database!');
+    console.error(err);
+  });
 
 // Load environmental variables if in development
 if (process.env.NODE_ENV !== 'production') {
@@ -140,6 +156,7 @@ app.use(bodyParser.json());
 app.use(morgan('common'));
 
 app.use('/room', roomsRouter);
+app.use('/auth', authRouter);
 
 // app.listen(PORT, () => {
 //   console.log(`Server is running on port: ${PORT}`);
