@@ -1,5 +1,6 @@
 import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, Unique } from 'typeorm';
 import * as bcrypt from 'bcrypt';
+import { UserRegistrationDTO } from 'DTO';
 
 @Entity()
 @Unique(['email'])
