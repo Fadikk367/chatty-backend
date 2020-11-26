@@ -25,6 +25,8 @@ export class UserRepository extends Repository<User> {
     user.salt = await bcrypt.genSalt();
     user.password = await this.hashPassword(password, user.salt);
 
+    // return user;
+
     try {
       await user.save();
       return user;
